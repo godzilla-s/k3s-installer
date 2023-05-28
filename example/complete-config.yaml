@@ -1,0 +1,65 @@
+settings:
+  rootPath: "./deploy"
+  config:
+    disableFlannel: false
+    disableServiceLB: true
+    disableTraefik: true
+    disableLocalPath: true
+    # enableDocker: false
+    startupTimeout: 2m
+  cluster:
+    master:
+      - node1
+  haIP: "192.168.122.62"
+  registries:
+    - name: ""
+      address: "test.registry.cn"
+      cacert: ""
+      loadImages: []
+
+charts:
+  metallb:
+    version: "0.13.9"
+    releaseName: metallb
+    namespace: network
+    timeout: 2m
+    setValues: []
+  longhorn:
+    version: "1.4.2"
+    releaseName: longhorn
+    namespace: network 
+
+packages:
+  k3s: 
+    path: pkgs/k3s/k3s
+    type: binary
+  installsh:
+    path: pkgs/k3s/install.sh
+    type: binary
+  k3s-selinux:
+    path: pkgs/k3s-selinux
+    type: rpm
+
+images:
+  k3s-airgap:
+    path: images/k3s-airgap-images-amd64.tar.gz
+
+nodes:
+  node1:
+    address: 192.168.122.62
+    rootPassword: "endqMjAyMw=="
+    role: "master"
+    requirements:
+      cpu: 2
+      memory: 4Gi
+      storage: 50Gi
+      kernelVersion: "5.4"
+    installPackages:
+      - k3s
+      - installsh
+      - k3s-selinux
+    preloadImages:
+      - k3s-airgap
+
+steps:
+  - type: k3s
