@@ -2,15 +2,18 @@ package core
 
 import (
 	"fmt"
-	"github.com/godzilla-s/k3s-installer/pkg/client/kube"
-	"github.com/godzilla-s/k3s-installer/pkg/node"
 	"sync"
 	"sync/atomic"
+
+	"github.com/godzilla-s/k3s-installer/pkg/client/kube"
+	"github.com/godzilla-s/k3s-installer/pkg/node"
+	"github.com/godzilla-s/k3s-installer/pkg/utils"
 )
 
 type k3sStep struct {
 	waitGroup sync.WaitGroup
-	*Installer
+	msg       *utils.Print
+	*cluster
 }
 
 func (k *k3sStep) install() error {
@@ -70,31 +73,42 @@ func (k *k3sStep) uninstall() error {
 	return nil
 }
 
-type chartsStep struct {
+type chartStep struct {
 	charts []*kube.Chart
-	*Installer
+	msg    *utils.Print
+	*cluster
 }
 
-func (c *chartsStep) install() error {
+func (c *chartStep) install() error {
 	c.msg.Step("install charts")
 	for _, chart := range c.charts {
-		c.log.Infof("install chart <%s>, namespace: %s", chart.ReleaseName, chart.Namespace)
+		c.msg.Message("install chart <%s>, namespace: %s", chart.ReleaseName, chart.Namespace)
 		err := c.installChart(chart)
 		if err != nil {
-			c.log.Errorf("fail to install chart <%s>, namespace: %s, error: %v", chart.ReleaseName, chart.Namespace, err)
+			c.msg.Error("fail to install chart <%s>, namespace: %s, error: %v", chart.ReleaseName, chart.Namespace, err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *chartsStep) uninstall() error {
+func (c *chartStep) uninstall() error {
+	c.msg.Step("uninstall charts")
+	for i := len(c.charts) - 1; i >= 0; i-- {
+		chart := c.charts[i]
+		c.log.Infof("uninstall chart <%s>, namespace: %s", chart.ReleaseName, chart.Namespace)
+		err := c.uninstallChart(chart)
+		if err != nil {
+			c.log.Errorf("fail to uninstall chart <%s>, namespace: %s, error: %v", chart.ReleaseName, chart.Namespace, err)
+			return err
+		}
+	}
 	return nil
 }
 
 type manifestStep struct {
 	manifests []string
-	*Installer
+	*cluster
 }
 
 func (m *manifestStep) install() error {

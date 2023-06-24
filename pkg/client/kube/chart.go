@@ -3,12 +3,14 @@ package kube
 import (
 	"errors"
 	"fmt"
-	"github.com/godzilla-s/k3s-installer/pkg/config"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/release"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/godzilla-s/k3s-installer/pkg/config"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/release"
 
 	"helm.sh/helm/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/action"
@@ -81,13 +83,26 @@ func (r *restClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
 }
 
 func ToChart(c *config.Chart) *Chart {
+	baseDir := filepath.Dir(c.Path)
 	ch := &Chart{
 		PkgPath:     c.Path,
 		ReleaseName: c.ReleaseName,
 		Namespace:   c.Namespace,
-		ValuesFile:  filepath.Join(filepath.Dir(c.Path), "values.yaml"),
+		ValuesFile:  filepath.Join(baseDir, "values.yaml"),
 		Timeout:     c.Timeout,
 	}
+	if ch.Timeout == 0 {
+		ch.Timeout = 1 * time.Minute
+	}
+	_, err := os.Stat(filepath.Join(baseDir, "after"))
+	if err == nil {
+		ch.After = filepath.Join(baseDir, "after")
+	}
+	_, err = os.Stat(filepath.Join(baseDir, "before"))
+	if err == nil {
+		ch.Before = filepath.Join(baseDir, "before")
+	}
+	fmt.Println("====", ch)
 	return ch
 }
 
@@ -145,8 +160,10 @@ func (cli *ChartClient) Install(c *Chart) error {
 	}
 
 	if c.After != "" {
-		err = cli.kube.Apply(c.Before, ApplyOption{})
+		fmt.Println("apply after config")
+		err = cli.kube.Apply(c.After, ApplyOption{})
 		if err != nil {
+			cli.kube.log.Errorln("fail to apply after config, error:", err)
 			return err
 		}
 	}

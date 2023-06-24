@@ -1,7 +1,7 @@
 package config
 
 const (
-	PackageBinary        = "binary"
+	PackageFile          = "file"
 	PackageDirectory     = "directory"
 	PackageDockerService = "docker"
 	PackageRPM           = "rpm"

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/godzilla-s/k3s-installer/pkg/utils"
@@ -25,8 +26,9 @@ type Client struct {
 
 type SystemInfo struct {
 	NumberCPU     int
-	Memory        float32 // Gi
-	Storage       float32
+	Memory        utils.Capacity // Gi
+	Storage       utils.Capacity
+	Hostname      string
 	KernelVersion utils.KernelVersion
 }
 
@@ -43,10 +45,6 @@ type SystemAction interface {
 }
 
 type CommandOption func(*ssh.Session)
-
-func WithEnv(sess *ssh.Session) {
-
-}
 
 func New(conf *Config, log *logrus.Entry) (*Client, error) {
 	auth := &ssh.ClientConfig{
@@ -101,14 +99,37 @@ func (c *Client) execCommand(cmd string, options ...CommandOption) ([]byte, erro
 	return sess.CombinedOutput(cmd)
 }
 
-func (c *Client) GetSystemInfo() {
+func (c *Client) GetSystemInfo() (*SystemInfo, error) {
 	// get cpu core number
 	cmd := "cat /proc/cpuinfo |grep processor |wc -l"
 	output, err := c.execCommand(cmd)
 	if err != nil {
-		return
+		return nil, err
 	}
-	bytes.TrimRight(output, "\n")
+	cpuNumber, err := strconv.ParseInt(string(bytes.TrimRight(output, "\n")), 0, 10)
+	if err != nil {
+		return nil, err
+	}
+
+	output, err = c.execCommand(`free -h | awk 'NR==2{print $2}'`)
+	if err != nil {
+		return nil, err
+	}
+	memorySize, err := utils.ParseCapacity(string(bytes.TrimRight(output, "\n")))
+	if err != nil {
+		return nil, err
+	}
+
+	output, err = c.execCommand("hostname")
+	if err != nil {
+		return nil, err
+	}
+	hostname := string(bytes.TrimRight(output, "\n"))
+	return &SystemInfo{
+		NumberCPU: int(cpuNumber),
+		Memory:    memorySize,
+		Hostname:  hostname,
+	}, nil
 }
 
 func (c *Client) WriteFile(file string, data []byte, override bool) error {
@@ -126,10 +147,10 @@ func (c *Client) WriteFile(file string, data []byte, override bool) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	if !fi.IsDir() {
-		return fmt.Errorf("cannot create, basedir is a file")
+	} else {
+		if !fi.IsDir() {
+			return fmt.Errorf("cannot create, basedir is a file")
+		}
 	}
 
 	f, err := c.sftp.Create(file)
@@ -142,6 +163,11 @@ func (c *Client) WriteFile(file string, data []byte, override bool) error {
 }
 
 func (c *Client) ReadFile(file string) ([]byte, error) {
+	err := c.connect()
+	if err != nil {
+		fmt.Println("connect fail:", err)
+		return nil, err
+	}
 	f, err := c.sftp.Open(file)
 	if err != nil {
 		return nil, err
@@ -222,7 +248,7 @@ func (c *Client) CopyFile(local, target string, override bool) error {
 		return nil
 	}
 	baseDir := filepath.Dir(target)
-	fmt.Println("baseDir:", baseDir)
+	// fmt.Println("baseDir:", baseDir)
 	fi, err = c.sftp.Stat(baseDir)
 	if err != nil {
 		err = c.sftp.MkdirAll(baseDir)
@@ -244,7 +270,7 @@ func (c *Client) CopyFile(local, target string, override bool) error {
 		return err
 	}
 	c.sftp.Chmod(target, fri.Mode())
-	c.log.Printf("copy fail success, local: %s, target: %s, error: %v", local, target, err)
+	c.log.Printf("copy file success, local: %s, target: %s", local, target)
 	return nil
 }
 

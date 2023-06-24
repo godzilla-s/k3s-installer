@@ -3,8 +3,11 @@ package kube
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
+	"os"
+	"path/filepath"
+
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,8 +23,6 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"os"
-	"path/filepath"
 	sigyaml "sigs.k8s.io/yaml"
 )
 
@@ -56,7 +57,6 @@ func New(masterURL string, kubeConfigData []byte, log *logrus.Logger) (*Client, 
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("==================")
 	return &Client{
 		dynamic:    dynamicClient,
 		clientSet:  clientSet,
@@ -155,6 +155,7 @@ func (c *Client) yamlToAction(yamlFile string, action resourceFunc, option Optio
 			continue
 		}
 
+		// fmt.Println(string(rawObj.Raw))
 		obj, gvk, err := unstructured.UnstructuredJSONScheme.Decode(rawObj.Raw, nil, nil)
 		if err != nil {
 			return err
@@ -178,6 +179,7 @@ func (c *Client) yamlToAction(yamlFile string, action resourceFunc, option Optio
 			resource:           mapping.Resource,
 			unstructuredObject: &unstructured.Unstructured{Object: mapper},
 		}
+
 		err = action(ctx, resourceObj, option)
 		if err != nil {
 			return err
@@ -237,7 +239,7 @@ func (c *Client) createNamespacedResource(ctx context.Context, object *resourceO
 	namespace := object.unstructuredObject.GetNamespace()
 
 	_, err := c.dynamic.Resource(object.resource).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 
@@ -313,6 +315,7 @@ func (c *Client) refreshResource(name string) error {
 	}
 
 	c.restMapper = restmapper.NewDiscoveryRESTMapper(restMapperRes)
+
 	return nil
 }
 

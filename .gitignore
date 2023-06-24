@@ -1,3 +1,4 @@
 deploy/
 bin/
 .tmp/
+.idea/

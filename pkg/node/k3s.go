@@ -2,9 +2,10 @@ package node
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/godzilla-s/k3s-installer/pkg/client/remote"
 	"gopkg.in/yaml.v3"
-	"time"
 
 	"github.com/godzilla-s/k3s-installer/pkg/utils"
 )
@@ -127,7 +128,7 @@ func (n *Node) UninstallK3S() error {
 		return err
 	}
 	if err == remote.ErrK3SNotRunning {
-		n.log.Errorf("k3s server is not running")
+		n.log.Warningln("k3s server is not running")
 		return nil
 	}
 
@@ -177,4 +178,8 @@ func (n *Node) uninstallK3S() error {
 
 func (n *Node) GetKubeConfig() ([]byte, error) {
 	return n.remote.ReadFile("/etc/rancher/k3s/k3s.yaml")
+}
+
+func (n *Node) Test() {
+	n.remote.ReadFile("/etc/rancher/k3s/k3s.yaml")
 }

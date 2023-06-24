@@ -1,9 +1,10 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Chart struct {
@@ -22,7 +23,7 @@ type Package struct {
 }
 
 type Image struct {
-	Path string
+	Path string `yaml:"path"`
 }
 
 type Settings struct {
@@ -82,8 +83,8 @@ type Config struct {
 }
 
 type Cluster struct {
-	Master []string
-	Worker []string
+	Master []string `yaml:"master"`
+	Worker []string `yaml:"worker"`
 }
 
 func Parse(configFile string) (*Config, error) {

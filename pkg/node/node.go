@@ -2,29 +2,30 @@ package node
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"path/filepath"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/godzilla-s/k3s-installer/pkg/client/remote"
 	"github.com/godzilla-s/k3s-installer/pkg/config"
 )
 
 type Node struct {
-	remote             *remote.Client
-	address            string
-	isMaster           bool
-	isClusterInit      bool
-	installingPackages []Package
-	preloadImages      []loadImage
-	log                *logrus.Entry
-	config             *k3sConfig
-	registries         *registryConfig
+	remote        *remote.Client
+	systemInfo    *remote.SystemInfo
+	address       string
+	isMaster      bool
+	isClusterInit bool
+	packages      []Package
+	preloadImages []loadImage
+	log           *logrus.Entry
+	config        *k3sConfig
+	registries    *registryConfig
 }
 
-func New(n *config.Node, conf *config.Config, log *logrus.Logger) (*Node, error) {
+func New(n *config.Node, conf *config.Config, isMaster, isClusterInti bool, log *logrus.Logger) (*Node, error) {
 	logEntry := logrus.NewEntry(log).WithFields(map[string]interface{}{
 		"host": n.Address,
-		"role": n.Role,
 	})
 	remoteCli, err := remote.New(&remote.Config{
 		Address:  fmt.Sprintf("%s:%d", n.Address, n.SSHPort),
@@ -34,14 +35,20 @@ func New(n *config.Node, conf *config.Config, log *logrus.Logger) (*Node, error)
 	if err != nil {
 		return nil, err
 	}
-	isMaster := n.Role == "master"
+	systemInfo, err := remoteCli.GetSystemInfo()
+	if err != nil {
+		return nil, err
+	}
+
 	node := &Node{
-		address:    n.Address,
-		remote:     remoteCli,
-		log:        logEntry,
-		config:     toConfig(isMaster, conf),
-		isMaster:   isMaster,
-		registries: toRegistriesConfig(),
+		address:       n.Address,
+		remote:        remoteCli,
+		systemInfo:    systemInfo,
+		log:           logEntry,
+		config:        toConfig(isMaster, conf),
+		isMaster:      isMaster,
+		isClusterInit: isClusterInti,
+		registries:    toRegistriesConfig(),
 	}
 	for _, imgName := range n.PreloadImages {
 		img := conf.Images[imgName]
@@ -50,7 +57,7 @@ func New(n *config.Node, conf *config.Config, log *logrus.Logger) (*Node, error)
 
 	for _, pkgName := range n.InstallPackages {
 		pkg := toPackage(pkgName, conf.Packages[pkgName], node)
-		node.installingPackages = append(node.installingPackages, pkg)
+		node.packages = append(node.packages, pkg)
 	}
 
 	return node, nil
@@ -79,6 +86,7 @@ func (n *Node) Cleanup() error {
 }
 
 func (n *Node) checkSystem() error {
+
 	return nil
 }
 
@@ -87,7 +95,7 @@ func (n *Node) isK3SRunning() error {
 }
 
 func (n *Node) installPackages() error {
-	for _, pkg := range n.installingPackages {
+	for _, pkg := range n.packages {
 		if err := pkg.install(); err != nil {
 			return err
 		}
@@ -99,7 +107,7 @@ func (n *Node) loadImages() error {
 	for _, img := range n.preloadImages {
 		target := filepath.Join("/var/lib/rancher/k3s/agent/images", filepath.Base(img.path))
 		err := n.remote.CopyFile(img.path, target, false)
-		if err != nil {
+		if err != nil && err != remote.ErrFileDoesExist {
 			n.log.Errorf("fail to upload images, path: %s, error: %v", img.path, err)
 			return err
 		}
@@ -107,7 +115,7 @@ func (n *Node) loadImages() error {
 	return nil
 }
 func (n *Node) uninstallPackage() error {
-	for _, pkg := range n.installingPackages {
+	for _, pkg := range n.packages {
 		if err := pkg.uninstall(); err != nil {
 			return err
 		}

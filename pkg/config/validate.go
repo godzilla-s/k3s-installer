@@ -23,6 +23,9 @@ func (c *Config) validate() error {
 	if err := c.validateImages(); err != nil {
 		return err
 	}
+	if err := c.validateSteps(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -47,6 +50,7 @@ func (c *Config) validateSettings() error {
 	return nil
 }
 func (c *Config) validateCharts() error {
+
 	for name, chart := range c.Charts {
 		if chart.Namespace == "" {
 			chart.Namespace = "default"
@@ -55,10 +59,10 @@ func (c *Config) validateCharts() error {
 			return fmt.Errorf("invalid chart <%s>: missing version", name)
 		}
 		if chart.Path == "" {
-			chart.Path = filepath.Join(c.Settings.RootPath, "charts", name)
+			chart.Path = filepath.Join("charts", name)
 		}
 
-		chartPkg := filepath.Join(chart.Path, fmt.Sprintf("%s-%s.tgz", name, chart.Version))
+		chartPkg := filepath.Join(c.Settings.RootPath, chart.Path, fmt.Sprintf("%s-%s.tgz", name, chart.Version))
 		fi, err := os.Stat(chartPkg)
 		if err != nil {
 			return fmt.Errorf("invalid chart <%s>: %v", name, err)
@@ -78,7 +82,7 @@ func (c *Config) validateCharts() error {
 func (c *Config) validatePackages() error {
 	for name, pkg := range c.Packages {
 		switch pkg.Type {
-		case PackageBinary:
+		case PackageFile:
 			if pkg.Path == "" {
 				return fmt.Errorf("invalid package <%s>: missing path", name)
 			}
@@ -168,6 +172,21 @@ func (c *Config) validateImages() error {
 			return fmt.Errorf("invalid image <%s>: image is directory", name)
 		}
 		img.Path = imagePath
+	}
+	return nil
+}
+
+func (c *Config) validateSteps() error {
+	for _, step := range c.Steps {
+		switch step.Type {
+		case "k3s":
+		case "chart":
+			for _, chartName := range step.Charts {
+				if _, ok := c.Charts[chartName]; !ok {
+					return fmt.Errorf("invalid step <%s>: missing chart <%s>", step.Type, chartName)
+				}
+			}
+		}
 	}
 	return nil
 }

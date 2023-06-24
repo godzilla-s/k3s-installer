@@ -1,11 +1,12 @@
 package node
 
 import (
-	"github.com/godzilla-s/k3s-installer/pkg/client/remote"
-	"github.com/godzilla-s/k3s-installer/pkg/config"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/godzilla-s/k3s-installer/pkg/client/remote"
+	"github.com/godzilla-s/k3s-installer/pkg/config"
 )
 
 type Package interface {
@@ -20,9 +21,9 @@ type loadImage struct {
 
 func toPackage(name string, pkg *config.Package, node *Node) Package {
 	switch pkg.Type {
-	case config.PackageBinary:
+	case config.PackageFile:
 		target := filepath.Join("/usr/local/bin", filepath.Base(pkg.Path))
-		return &binary{name: name, localPath: pkg.Path, target: target, Node: node}
+		return &file{name: name, localPath: pkg.Path, target: target, Node: node}
 	case config.PackageDirectory:
 		return &directory{name: name, localPath: pkg.Path, targetPath: pkg.TargetPath, Node: node}
 	case config.PackageRPM:
@@ -34,14 +35,14 @@ func toPackage(name string, pkg *config.Package, node *Node) Package {
 	}
 }
 
-type binary struct {
+type file struct {
 	name      string
 	localPath string
 	target    string
 	*Node
 }
 
-func (b *binary) install() error {
+func (b *file) install() error {
 	b.log.Printf("install binary <%s>", b.name)
 	err := b.remote.CopyFile(b.localPath, b.target, true)
 	if err != nil && err != remote.ErrFileDoesExist {
@@ -52,7 +53,7 @@ func (b *binary) install() error {
 	return nil
 }
 
-func (b *binary) uninstall() error {
+func (b *file) uninstall() error {
 	b.log.Println("uninstall binary <%s>", b.name)
 	return b.remote.Remove(b.localPath)
 }

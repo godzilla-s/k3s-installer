@@ -5,37 +5,38 @@ settings:
     disableServiceLB: true
     disableTraefik: true
     disableLocalPath: true
-    # enableDocker: false
     startupTimeout: 2m
   cluster:
     master:
       - node1
   haIP: "192.168.122.62"
-  registries:
-    - name: ""
-      address: "test.registry.cn"
-      cacert: ""
-      loadImages: []
 
 charts:
+  ingress-nginx:
+    version: 4.7.0
+    namespace: network 
+    timeout: 2m
+    releaseName: ingress-nginx
   metallb:
-    version: "0.13.9"
+    version: 0.13.9
     releaseName: metallb
     namespace: network
     timeout: 2m
-    setValues: []
   longhorn:
-    version: "1.4.2"
+    version: 1.4.2
     releaseName: longhorn
     namespace: network 
 
 packages:
   k3s: 
     path: pkgs/k3s/k3s
-    type: binary
+    type: file
   installsh:
     path: pkgs/k3s/install.sh
-    type: binary
+    type: file
+  helm:
+    path: pkgs/helm/helm
+    type: file
   k3s-selinux:
     path: pkgs/k3s-selinux
     type: rpm
@@ -43,6 +44,10 @@ packages:
 images:
   k3s-airgap:
     path: images/k3s-airgap-images-amd64.tar.gz
+  nginx-ingress:
+    path: images/nginx-ingress-v1.8.0.tar
+  metallb:
+    path: images/metallb-v0.13.9.tar
   longhorn:
     path: images/longhorn-1.4.2.tar
 
@@ -50,7 +55,6 @@ nodes:
   node1:
     address: 192.168.122.62
     rootPassword: "endqMjAyMw=="
-    role: "master"
     requirements:
       cpu: 2
       memory: 4Gi
@@ -60,9 +64,16 @@ nodes:
       - k3s
       - installsh
       - k3s-selinux
+      - helm
     preloadImages:
       - k3s-airgap
-      - longhorn
+      - nginx-ingress
+      - metallb
 
 steps:
-  - type: k3s
+  # - type: k3s
+  - type: chart
+    charts:
+      - metallb
+      - ingress-nginx
+      

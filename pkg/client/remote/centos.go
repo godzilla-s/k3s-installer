@@ -29,7 +29,7 @@ func (c *centosClient) Install(pkgDir string) error {
 	}
 
 	if len(rpms) == 0 {
-		//
+		c.log.Warningf("no rpm files to be installed")
 		return nil
 	}
 
@@ -67,6 +67,7 @@ func (c *centosClient) install(rpms []string) error {
 		return nil
 	}
 	cmd := fmt.Sprintf("yum localinstall -y %s", strings.Join(rpms, " "))
+	// fmt.Println("=====> command:", cmd)
 	output, err := c.execCommand(cmd)
 	if err != nil {
 		for _, line := range bytes.Split(output, []byte("\n")) {
