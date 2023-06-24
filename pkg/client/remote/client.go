@@ -136,7 +136,7 @@ func (c *Client) WriteFile(file string, data []byte, override bool) error {
 	if !override {
 		_, err := c.sftp.Stat(file)
 		if err == nil {
-			return ErrFileDoesExist
+			return ErrFileExist
 		}
 	}
 
@@ -233,7 +233,7 @@ func (c *Client) CopyFile(local, target string, override bool) error {
 			return fmt.Errorf("target is a directory")
 		}
 		if !override {
-			return ErrFileDoesExist
+			return ErrFileExist
 		}
 		fw, err := c.sftp.OpenFile(target, os.O_CREATE|os.O_RDWR)
 		if err != nil {
@@ -297,9 +297,9 @@ func (c *Client) Remove(target string) error {
 }
 
 func (c *Client) StartK3S(isMaster bool) error {
-	cmd := "install.sh"
+	cmd := "systemctl restart k3s"
 	if !isMaster {
-		cmd = "install.sh"
+		cmd = "systemctl restart k3s-agent"
 	}
 
 	output, err := c.execCommand(cmd)

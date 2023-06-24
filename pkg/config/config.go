@@ -19,7 +19,7 @@ type Chart struct {
 type Package struct {
 	Type       string `yaml:"type"`
 	Path       string `yaml:"path"`
-	TargetPath string `yaml:"targetPath"`
+	TargetPath string `yaml:"target"`
 }
 
 type Image struct {

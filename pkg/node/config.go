@@ -2,6 +2,7 @@ package node
 
 import (
 	"fmt"
+
 	"github.com/godzilla-s/k3s-installer/pkg/config"
 )
 
@@ -65,6 +66,9 @@ func toRegistriesConfig() *registryConfig {
 	rc := &registryConfig{
 		Mirrors: map[string]mirror{
 			"docker.io": {
+				Endpoints: []string{"https://dockerhub.io"},
+			},
+			"quay.io": {
 				Endpoints: []string{"https://dockerhub.io"},
 			},
 		},

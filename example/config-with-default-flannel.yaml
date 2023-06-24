@@ -31,12 +31,15 @@ packages:
   k3s: 
     path: pkgs/k3s/k3s
     type: file
+    target: /usr/local/bin/k3s
   installsh:
     path: pkgs/k3s/install.sh
     type: file
+    target: /usr/local/bin/install.sh
   helm:
     path: pkgs/helm/helm
     type: file
+    target: /usr/local/bin/helm
   k3s-selinux:
     path: pkgs/k3s-selinux
     type: rpm

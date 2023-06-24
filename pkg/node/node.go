@@ -107,7 +107,7 @@ func (n *Node) loadImages() error {
 	for _, img := range n.preloadImages {
 		target := filepath.Join("/var/lib/rancher/k3s/agent/images", filepath.Base(img.path))
 		err := n.remote.CopyFile(img.path, target, false)
-		if err != nil && err != remote.ErrFileDoesExist {
+		if err != nil && err != remote.ErrFileExist {
 			n.log.Errorf("fail to upload images, path: %s, error: %v", img.path, err)
 			return err
 		}

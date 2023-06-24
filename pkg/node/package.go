@@ -45,7 +45,7 @@ type file struct {
 func (b *file) install() error {
 	b.log.Printf("install binary <%s>", b.name)
 	err := b.remote.CopyFile(b.localPath, b.target, true)
-	if err != nil && err != remote.ErrFileDoesExist {
+	if err != nil && err != remote.ErrFileExist {
 		b.log.Errorf("install binary <%s> fail", b.name)
 		return err
 	}
@@ -97,7 +97,7 @@ func (r *rpm) install() error {
 		return err
 	}
 
-	// defer r.remote.Remove(targetPath)
+	defer r.remote.Remove(targetPath)
 
 	err = r.remote.Install(targetPath)
 	if err != nil {
