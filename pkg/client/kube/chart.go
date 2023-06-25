@@ -102,7 +102,6 @@ func ToChart(c *config.Chart) *Chart {
 	if err == nil {
 		ch.Before = filepath.Join(baseDir, "before")
 	}
-	fmt.Println("====", ch)
 	return ch
 }
 
@@ -191,7 +190,8 @@ func (cli *ChartClient) Uninstall(c *Chart) error {
 		return err
 	}
 
-	fmt.Println("------ :", rel)
+	_ = rel
+	// fmt.Println("------ :", rel)
 
 	if c.Before != "" {
 		err = cli.kube.Delete(c.Before, DeleteOption{})

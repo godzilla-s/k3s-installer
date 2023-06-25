@@ -9,6 +9,7 @@ settings:
   cluster:
     master:
       - node1
+      - node2
   haIP: "192.168.122.62"
 
 charts:
@@ -72,9 +73,26 @@ nodes:
       - k3s-airgap
       - nginx-ingress
       - metallb
+  node2:
+    address: 192.168.122.67
+    rootPassword: "endqMjAyMw=="
+    requirements:
+      cpu: 2
+      memory: 4Gi
+      storage: 50Gi
+      kernelVersion: "5.4"
+    installPackages:
+      - k3s
+      - installsh
+      - k3s-selinux
+      - helm
+    preloadImages:
+      - k3s-airgap
+      - nginx-ingress
+      - metallb
 
 steps:
-  - type: k3s
+  # - type: k3s
   - type: chart
     charts:
       - metallb
